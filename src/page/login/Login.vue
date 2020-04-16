@@ -1,14 +1,15 @@
 <template>
     <div class="login-vue" :style="bg">
+      <Spin size="large" fix v-if="spinShow"></Spin>
         <div class="container">
             <p class="title">WELCOME</p>
             <div class="input-c">
               <i-input   v-model="account" placeholder="用户名" clearable  @on-blur="verifyAccount"  style="width: 200px"></i-input>
-                <p class="error">{{accountError}}</p>
+                <p class="error" style="font-size: 14px">{{accountError}}</p>
             </div>
             <div class="input-c">
               <i-input  type="password" v-model="pwd"  placeholder="密码" clearable  @on-blur="verifyPwd"  style="width: 200px"></i-input>
-                <p class="error">{{pwdError}}</p>
+                <p class="error" style="font-size: 14px">{{pwdError}}</p>
             </div>
            <!-- <Button :loading="isShowLoading" class="submit" type="primary" @click="submit">登陆</Button>-->
           <i-button :loading="isShowLoading" type="primary" @click="submit" style="width: 200px" >登陆</i-button>
@@ -18,15 +19,20 @@
 </template>
 
 <script>
+  import http from '@/assets/js/public'
+  var sysConfig = require('@/assets/js/sysConfig')
+  var preUrl = sysConfig.cmsUrlPre;
 export default {
+
     name: 'Login',
     data() {
         return {
-            account: 'admin',
+            account: 'boss',
             pwd: '111111',
             accountError: '',
             pwdError: '',
             isShowLoading: false,
+            spinShow :false,
             bg: {}
         }
     },
@@ -35,15 +41,13 @@ export default {
       var random = Math.floor(Math.random()*7);
       this.bg.backgroundImage = 'url(' + require('../../assets/img/bg0' + random + '.jpg') + ')';
 
-
-
-      this.$Notice.open({
-        title: '登陆提示',
-        desc: "账号:admin  密码:admin"
-      });
     },
     mounted() {
-
+      this.cleanToken();
+      this.$Notice.open({
+        title: '登陆提示',
+        desc: "账号:boss  密码:111111"
+      });
         document.onkeydown = e => {
             // 监听回车事件
             if (e.keyCode == 13) {
@@ -52,41 +56,62 @@ export default {
         }
     },
     methods: {
+      cleanToken(){
+        localStorage.removeItem(sysConfig.accessTokenKey);
+        localStorage.removeItem(sysConfig.refreshTokenKey);
+      },
         verifyAccount(e) {
-            if (this.account !== 'admin') {
-                this.accountError = '账号为admin'
+          var obj = this.account;
+          if(typeof obj === "undefined" || obj === null || obj === ""){
+                this.accountError = '账号不能为空';
+                return false;
             } else {
-                this.accountError = ''
+                this.accountError = '';
+                return true;
             }
         },
         verifyPwd(e) {
-            if (this.pwd !== '111111') {
-                this.pwdError = '密码为111111'
-            } else {
-                this.pwdError = ''
+          var obj = this.pwd;
+          if(typeof obj === "undefined" || obj === null || obj === ""){
+            this.pwdError = '密码不能为空';
+            return false;
+          } else {
+                this.pwdError = '';
+                return true;
             }
         },
         register() {
-            console.log('注册账号')
+          this.$Message.info('注册账号_模块_正在建设中....');
         },
         forgetPwd() {
-            console.log('忘记密码')
+          this.$Message.info('忘记密码_模块_正在建设中....');
         },
         submit() {
-            if (this.account === 'admin' && this.pwd === 'admin') {
-                this.isShowLoading = true
-                setTimeout(() => {
-                    this.$router.replace('/index/home')
-                }, 100)
-            } else {
-                if (this.account !== 'admin') {
-                    this.accountError = '账号为admin'
+          if(this.verifyAccount() && this.verifyPwd()){
+            this.spinShow = true;
+            localStorage.removeItem(sysConfig.accessTokenKey);
+            localStorage.removeItem(sysConfig.refreshTokenKey);
+            http.requestPost(preUrl+"/auth/login",{"account" : this.account, "password" : this.pwd}).then(
+              (data)=>{
+                if(data.state === '200'){
+                  this.spinShow = false;
+                  this.$router.replace("/index/home");
+                  localStorage.setItem(sysConfig.accessTokenKey,data.data.jwtToken);
+                  localStorage.setItem(sysConfig.refreshTokenKey,data.data.refreshToken);
+                }else {
+                  this.spinShow = false;
+                  this.$Message.error(data.failMsg?data.failMsg:"登陆失败，请重试!");
                 }
 
-                if (this.pwd !== 'admin') {
-                    this.pwdError = '密码为admin'
-                }
-            }
+              },
+              (error)=>{
+                this.spinShow = false;
+                this.$Notice.open({
+                  desc: '网络异常'
+                });
+              }
+            )
+          }
         }
     }
 }

@@ -2,7 +2,7 @@
   <Timeline pending="true">
     <TimelineItem color="green">
       <Icon type="ios-trophy" slot="dot"></Icon>
-      <span>发布里程碑版本</span>
+      <span>发布里程碑版本,静态数据。building....</span>
     </TimelineItem>
     <TimelineItem color="red">发布1.0版本</TimelineItem>
     <TimelineItem color="green">发布2.0版本</TimelineItem>

@@ -1,5 +1,9 @@
 <template>
-    <div class="index-vue">
+
+  <div  v-if="loadingFlag" class="demo-spin-container" style="width: 100%;height: 100%" >
+    <Spin size="large" fix></Spin>
+  </div>
+    <div v-else class="index-vue">
         <!-- 侧边栏 -->
         <aside :class="asideClassName">
             <div class="logo-c">
@@ -15,43 +19,15 @@
                   <router-link v-show="isShowAsideTitle" to="/index/home" tag="span">主页</router-link>
                 </MenuItem>
 
-                <Submenu name="1">
-                    <template slot="title">
-                        <Icon type="ios-paper"/>
-                        <span v-show="isShowAsideTitle">后台管理</span>
-                    </template>
-                    <!-- name:路由名称 -->
-                  <Submenu name="1-1">
-                    <template slot="title">
-                      <Icon type="ios-paper" />
-                      内容管理
-                    </template>
+                <Submenu :name="tab.id" v-for="(tab,index) in leftTabs" :key="tab.id">
+                  <template slot="title" >
+                    <Icon type="ios-paper"/>
+                    <span  v-show="isShowAsideTitle" >{{tab.name}}</span>
+                  </template>
+                  <!--name属性会传入@on-select="gotoPage",根据name跳转对应得路由。:to="'/index'+subTab.url" 貌似可以删掉，但是留着吧-->
+                  <MenuItem v-for="(subTab,index) in tab.subMenus" :name="subTab.tips" :to="'/index'+subTab.url" :key="subTab.id">{{subTab.name}}</MenuItem>
 
-                    <MenuItem name="User" to="/index/user" >文章管理</MenuItem>
-                    <MenuItem name="Test" to="/index/test">评论管理</MenuItem>
-                    <MenuItem name="User" to="/index/user">举报管理</MenuItem>
-                  </Submenu>
-
-                  <Submenu name="1-2">
-                    <template slot="title">
-                      <Icon type="ios-paper" />
-                      部门管理
-                    </template>
-                    <MenuItem name="1-2-1">文章管理</MenuItem>
-                    <MenuItem name="1-2-2">评论管理</MenuItem>
-                    <MenuItem name="1-2-3">举报管理</MenuItem>
-                  </Submenu>
                 </Submenu>
-
-              <Submenu name="2">
-                <template slot="title">
-                  <Icon type="ios-paper"/>
-                  <span v-show="isShowAsideTitle">系统管理</span>
-                </template>
-                <!-- name:路由名称 -->
-                <MenuItem v-show="isShowAsideTitle" name="T1">字典管理</MenuItem>
-                <MenuItem v-show="isShowAsideTitle" name="T1">日志管理</MenuItem>
-              </Submenu>
             </Menu>
         </aside>
 
@@ -65,9 +41,9 @@
                         <div class="pointer" @click="isShrinkAside" title="收缩/展开">
                             <Icon type="ios-apps" />
                         </div>
-                        <div class="refresh-c" @click="reloadPage" title="刷新当前标签页">
+                        <!--<div class="refresh-c" @click="reloadPage" title="刷新当前标签页">
                             <Icon type="md-refresh" />
-                        </div>
+                        </div>-->
                         <div class="tag-options" title="关闭标签">
                             <Dropdown trigger="click" @on-click="closeTags">
                                 <Icon type="ios-options" />
@@ -77,6 +53,10 @@
                                 </DropdownMenu>
                             </Dropdown>
                         </div>
+
+                      <div class="tag-options" @click="lock" title="锁屏">
+                        <Icon type="md-lock" />
+                      </div>
                     </div>
 
                     <div class="h-right">
@@ -87,11 +67,35 @@
                           </div>
                         </div>
                         <div class="user-img-c">
-                            <img :src="userImg">
+                            <img :src="person.avatar?imgPre+person.avatar:userImg">
                         </div>
+
+                      <Modal v-model="showModal" class-name="vertical-center-modal">
+                        <p slot="header" style="color:#f60;text-align:center">
+                          <Icon type="ios-information-circle"></Icon>
+                          <span>修改密码</span>
+                        </p>
+                        <div style="text-align:center">
+                          <Form  ref="changePwdForm" :model="passwordData" :rules="ruleValidate" :label-width="80">
+                            <FormItem label="原始密码" prop="oldPwd">
+                              <Input v-model="passwordData.oldPwd" placeholder="输入原来的密码"></Input>
+                            </FormItem>
+                            <FormItem label="新的密码" prop="newPwd">
+                              <Input type="password" v-model="passwordData.newPwd"  placeholder="输入新的密码"></Input>
+                            </FormItem>
+                            <FormItem label="重复密码" prop="rePwd">
+                              <Input type="password" v-model="passwordData.rePwd"  placeholder="重复新的密码"></Input>
+                            </FormItem>
+                          </Form>
+                        </div>
+                        <div slot="footer">
+                          <Button type="error" size="large" long :loading="modal_loading" @click="changerPassword">确定</Button>
+                        </div>
+                      </Modal>
+
                         <Dropdown trigger="click" @on-click="userOperate" @on-visible-change="showArrow">
                             <div class="pointer">
-                                <span>{{user}}</span>
+                                <span>{{person.name}}</span>
                                 <Icon v-show="arrowDown" type="md-arrow-dropdown"/>
                                 <Icon v-show="arrowUp" type="md-arrow-dropup"/>
                             </div>
@@ -122,42 +126,97 @@
             <!-- 页面主体 -->
             <div class="main-content">
                 <div class="view-c">
-
-                    <keep-alive :include="keepAliveData">
-                        <router-view v-if="isShowRouter"/>
+                  <transition>
+                    <keep-alive>
+                        <router-view v-if="$route.meta.keepAlive"/>
                     </keep-alive>
 
-                    <div class="loading-c" v-show="showLoading">
+                  </transition>
+                  <transition>
+                  <router-view v-if="!$route.meta.keepAlive"/>
+                  </transition>
+                   <!-- <div class="loading-c" v-show="showLoading">
                         <Spin size="large"></Spin>
-                    </div>
+                    </div>-->
                 </div>
             </div>
         </section>
+
     </div>
+
 </template>
 
 <script>
   import {mapState,mapGetters} from 'vuex'
+  import http from '@/assets/js/public'
+  var sysConfig = require('@/assets/js/sysConfig')
+  var preUrl = sysConfig.cmsUrlPre;
+  /*import $ from 'jquery'
+
+  $(function () {
+    $(".ivu-menu-submenu-title").each((i,e)=>{
+      $(e).click(()=>{
+        //class="sub-menu"
+        //<a data-v-1ecf270e="" href="/index/user" target="_self" class="ivu-menu-item" style="padding-left: 43px;">文章管理</a>
+        console.log("sub-menu")
+        console.log($(e).text())
+        $(e).next().append("<a data-v-1ecf270e='' href='#/index/user' target='_self' class='ivu-menu-item' style='padding-left: 43px;'>文章管理33</a>")
+      });
+    });
+    //console.log($(".hou").text())
+  });*/
+
   export default {
     name: 'Index',
     data () {
+      const rePwd = (rule, value, callback) => {
+        if (value === '') {
+          callback(new Error('新的密码不能为空'));
+        } else if (value !== this.passwordData.newPwd) {
+          callback(new Error('两次输入的密码不相同!'));
+        } else {
+          callback();
+        }
+      };
         return {
-            curTabTitle:null,
+            modalTitle:'',
+            showModal:false,
+            loadingFlag:true,
+            modal_loading:false,
+            imgPre: sysConfig.imgRootPath,
+            curTabTitle:"", //null
             openMenus: [], // 要打开的菜单名字 name属性
             menuCache: [], // 缓存已经打开的菜单
             showLoading: false, // 是否显示loading
             hasNewMsg: true, // 是否有新消息
             isShowRouter: true,
+            person:{},
+            passwordData:{
+              oldPwd:"",
+              newPwd:"",
+              rePwd:""
+            },
+            ruleValidate: {
+              oldPwd: [
+                { required: true, message: '请输入原来的密码', trigger: 'blur' }
+              ],
+              newPwd: [
+                { required: true, message: '请输入新的密码', trigger: 'blur' }
+              ],
+              rePwd: [
+                { validator: rePwd, trigger: 'blur' }
+              ]
+            },
             msgNum: '10', // 新消息条数
             user: '小明', // 用户名
-            userImg: require('../../assets/img/user.jpg'), // 用户图片
+            userImg: require('../../assets/img/avatar1.jpg'), // 用户图片
             // 标签栏         标签标题     路由名称
             // 数据格式 {text: '首页', name: 'Foo'}
            /* tabs: [{text: '首页', name: 'Home'}],*/
             arrowUp: false, // 用户详情向上箭头
             arrowDown: true, // 用户详情向下箭头
             isShowAsideTitle: true, // 是否展示侧边栏内容
-            main: null, // 页面主要内容区域
+            main: "", // null页面主要内容区域
             asideClassName: 'aside-big', // 控制侧边栏宽度变化
             asideArrowIcons: [], // 缓存侧边栏箭头图标 收缩时用
             // 由于iView的导航菜单比较坑 只能设定一个name参数
@@ -172,6 +231,9 @@
         }
     },
     created() {
+      this.initLeftTabs();
+      this.getPersonInfo();
+
         // 已经为ajax请求设置了loading 请求前自动调用 请求完成自动结束
         // 添加请求拦截器
        /* this.$axios.interceptors.request.use(config => {
@@ -204,13 +266,9 @@
        */
     },
     mounted() {
-      console.log('this.$route')
-        console.log(this.$route)
-        var noticetag = this.$refs.noticeanimated;
-        noticetag.className = 'animated infinite shake slow';
 
         this.main = document.querySelector('.sec-right')
-        this.asideArrowIcons = document.querySelectorAll('aside .ivu-icon-ios-arrow-down')
+        //this.asideArrowIcons = document.querySelectorAll('aside .ivu-icon-ios-arrow-down')
         let w = document.documentElement.clientWidth || document.body.clientWidth
         window.onresize = () => {
             // 可视窗口宽度太小 自动收缩侧边栏
@@ -222,7 +280,7 @@
         }
     },
     computed: {
-      ...mapState(['tabs']),
+      ...mapState(['tabs','leftTabs']),
       ...mapGetters(['hasTabByTitle']),
         // 需要缓存的路由
         keepAliveData() {
@@ -230,10 +288,108 @@
             return this.tabs.map(item => item.name)
         }
     },
+    updated(){
+      this.initNoticeTips();
+    },
     methods: {
+      logout(){
+        http.requestGet(preUrl+"/auth/logout").then(data=>{
+          if(data.state === "200"){
+            localStorage.removeItem(sysConfig.accessTokenKey)
+            localStorage.removeItem(sysConfig.refreshTokenKey)
+            sessionStorage.removeItem("person");
+            this.$router.replace({name: 'Login'})
+          }else {
+            this.$Message.error(data.failMsg?data.failMsg:"退出失败")
+          }
+        },err=>{
+          this.modal_loading =false;
+          this.$Message.error("修改密码失败!")
+        });
+      },
+      lock(){
+        sessionStorage.setItem("lock","lock")
+        let url = this.$route.name;
+        console.log(url)
+        sessionStorage.setItem("lockurl",url)
+        this.$router.replace({name: 'Lock'})
+      },
+      changerPassword(){
+        this.$refs.changePwdForm.validate((valid)=>{
+          if(valid){
+            this.modal_loading =true;
+            http.requestPost(preUrl+"/sysUser/password/update",{'oldPwd':this.passwordData.oldPwd,'newPwd':this.passwordData.newPwd}).then(data=>{
+              if(data.state === "200"){
+                this.modal_loading =false;
+                this.showModal = false;
+                this.$Message.success(data.data+",需要重新登陆")
+              }else {
+                this.modal_loading =false;
+                this.$Message.error(data.failMsg?data.failMsg:"修改密码失败")
+              }
+            },err=>{
+              this.modal_loading =false;
+              this.$Message.error("修改密码失败!")
+            })
+          }
+
+        })
+
+      },
+      getPersonInfo(){
+        //sessionStorage中取，没有的化再查询
+        var sessionPerson =sessionStorage.getItem("person");
+        if(sessionPerson){
+          this.person = JSON.parse(sessionPerson);
+          return;
+        }
+        http.requestPost(preUrl + "/sysUser/getUser",{}).then(data=>{
+          if(data.state === "200"){
+            this.person = data.data;
+            sessionStorage.setItem("person",JSON.stringify(data.data));
+          }else {
+            this.$Message.error({
+              content: "加载个人信息失败，请刷新重试",
+              closable: true,
+              duration: 10
+            })
+          }
+        },err=>{
+          console.log(err)
+        });
+      },
+      initNoticeTips(){
+        var noticediv = this.$refs.noticeanimated;
+        noticediv.className = 'animated infinite shake slow';
+      },
+      initLeftTabs(){
+        this.loadingFlag = true;
+        //查询左侧的tabs数据
+        http.requestQuickGet(preUrl+"/menu/list").then((data)=>{
+          if(data.state === '200'){
+            this.$store.dispatch('initLeftTabs', data.data);
+            this.loadingFlag = false;
+          }else {
+            this.$Message.error({
+              content: data.failMsg,
+              closable: true,
+              duration: 10
+            });
+          }
+        },(error)=>{
+          this.$Message.error({
+            content: '你的网络环境可能比较差，稍后重试',
+            closable: true,
+            duration: 10
+          });
+        });
+      },
+
       //点击MenuItem处理事件
       handleClickMenuItem(data){
         if(data){
+          console.log("11111data")
+          console.log(data)
          //data值格式是"用户管理,/index/user",切割data
           var arr = data.split(",");
           var tab = {title:arr[0],path:arr[1]};
@@ -243,7 +399,7 @@
         }
 
       },
-        // 判断当前标签页是否激活状态,比较路由的path
+      // 判断当前标签页是否激活状态,比较路由的path
       isActive(name) {
         return this.$route.name === name
       },
@@ -251,13 +407,12 @@
         // 跳转页面 路由名称和参数
       gotoPage(name, params) {
         this.$router.replace({name, params})
-
         if (!this.keepAliveData.includes(name)) {
           // 如果标签超过8个 则将第一个标签删除
           if (this.tabs.length == 8) {
             this.tabs.shift()
           }
-          this.tabs.push({name, text: this.$route.meta})
+          this.tabs.push({name, text: this.$route.meta.title})
         }
       },
         // 用户操作
@@ -265,14 +420,15 @@
             switch(name) {
                 case '1':
                     // 修改密码
-                    this.gotoPage('Password')
+                  this.showModal = true;
+                    //this.gotoPage('Password')
                     break
                 case '2':
                     // 基本资料
-                    this.gotoPage('UserInfo')
+                    this.gotoPage('PersonDetails')
                     break
                 case '3':
-                    this.$router.replace({name: 'Login'})
+                    this.logout();
                     // 退出登陆
                     break
             }
@@ -345,7 +501,8 @@
         // 关闭单个标签
       closeTag(i) {
         let name = this.tabs[i].name
-        this.tabs.splice(i, 1)
+       // this.tabs.splice(i, 1)
+        this.$store.dispatch('removeOneTab', i);
         event.stopPropagation()
         // 如果关闭的是当前标签 则激活前一个标签
         // 如果关闭的是第一个标签 则激活后一个标签
@@ -381,13 +538,15 @@
         closeTags(flag) {
             if (flag == 1) {
                 // 关闭其他标签
-                this.tabs = []
-                this.gotoPage(this.$route.name)
+                let curRoute = this.$route.name;
+                this.$store.dispatch('removeAllTab');
+                this.$store.dispatch('addOneTab',{text: '首页', name: 'Home'});
+                this.gotoPage(curRoute)
             } else {
                 // 关闭所有标签
-                this.tabs = []
+              this.$store.dispatch('removeAllTab');
                 this.gotoPage('Home')
-                this.reloadPage()
+                //this.reloadPage()
             }
         },
         // 激活标签
@@ -408,7 +567,7 @@
                         on: {
                             click() {
                                 // 点击查看跳转到消息页
-                                self.gotoPage('Msg')
+                                self.gotoPage('NoticeShow')
                                 self.hasNewMsg = false,
                                 self.msgNum = 0
                             }
@@ -429,7 +588,18 @@
 </script>
 
 <style scoped>
-
+  .v-enter{
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  .v-leave-to{
+    opacity: 0;
+    transform: translateX(-100%);
+    position: absolute;
+  }
+  .v-enter-active,.v-leave-active{
+    transition: all 0.5s ease;
+  }
   .yourElement {
     animation-duration: 3s;
     animation-delay: 2s;
@@ -535,6 +705,7 @@ header .ivu-icon {
     overflow: hidden;
 }
 .tag-options {
+    margin-left: 25px;
     cursor: pointer;
     position: relative;
 }
@@ -624,4 +795,20 @@ a {
     top: 85px;
     z-index: 10;
 }
+  .demo-spin-container{
+    display: inline-block;
+    width: 200px;
+    height: 100px;
+    position: relative;
+    border: 1px solid #eee;
+  }
+
+  .vertical-center-modal{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ivu-modal{
+    top: 0;
+  }
 </style>

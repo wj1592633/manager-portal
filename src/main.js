@@ -12,6 +12,16 @@ Vue.config.productionTip = false
 Vue.use(iView)
 Vue.prototype.$axios = axios
 
+Vue.filter("YMDFilter",(date)=>{
+  if(date){
+    var date1 = new Date(date)
+    var year = date1.getFullYear();
+    var month = date1.getMonth();
+    var day = date1.getDay();
+    return year+"-"+month+"-"+day;
+  }
+  return "";
+})
 /* eslint-disable no-new */
 new Vue({
   el: '#app',
