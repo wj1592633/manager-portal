@@ -89,12 +89,11 @@
               key: 'status',
               render: (h, params) => {
                 const row = params.row;
-                const text = row.status === 1 ? true : row.status === 2 ? false : 'Fail';
-
+                const text = row.status === 1 ? true : false
                 return h('i-switch', {
                   props: {
-                    size:'large',
-                    value:text
+                    size: 'large',
+                    value: text
                   },
                   scopedSlots:{
                     open:()=>h('span','正常'),

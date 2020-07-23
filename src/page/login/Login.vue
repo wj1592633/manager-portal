@@ -28,7 +28,7 @@ export default {
     data() {
         return {
             account: 'boss',
-            pwd: '111111',
+            pwd: '111',
             accountError: '',
             pwdError: '',
             isShowLoading: false,
@@ -46,7 +46,7 @@ export default {
       this.cleanToken();
       this.$Notice.open({
         title: '登陆提示',
-        desc: "账号:boss  密码:111111"
+        desc: "账号:boss  密码:111"
       });
         document.onkeydown = e => {
             // 监听回车事件
